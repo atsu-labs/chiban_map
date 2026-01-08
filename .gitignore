@@ -1,0 +1,23 @@
+# 大きなファイル
+*.pmtiles
+*.geojson
+output_dir/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# 環境
+venv/
+ENV/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
