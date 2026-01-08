@@ -79,7 +79,7 @@
                     },
                     'pmtiles': {
                         type: 'vector',
-                        url: 'pmtiles://output.pmtiles',
+                        url: `pmtiles://${window.location.origin}${window.location.pathname.replace(/\/[^/]*$/, '')}/output.pmtiles`,
                         attribution: 'PMTiles data'
                     }
                 },
