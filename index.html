@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PMTiles Viewer</title>
+    <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.css" />
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+        }
+        #map {
+            width: 100%;
+            height: 100vh;
+        }
+        .legend {
+            position: absolute;
+            bottom: 30px;
+            right: 10px;
+            background: white;
+            padding: 10px;
+            border-radius: 5px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+            font-family: Arial, sans-serif;
+            font-size: 14px;
+            z-index: 1;
+        }
+        .legend h4 {
+            margin: 0 0 10px 0;
+            font-size: 14px;
+        }
+        .legend-item {
+            margin: 5px 0;
+            display: flex;
+            align-items: center;
+        }
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            margin-right: 8px;
+            border: 1px solid #333;
+        }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+    <div class="legend">
+        <h4>座標系</h4>
+        <div class="legend-item">
+            <div class="legend-color" style="background-color: #ff6b6b;"></div>
+            <span>任意座標系</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-color" style="background-color: #4dabf7;"></div>
+            <span>公共座標11系</span>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.js"></script>
+    <script src="https://unpkg.com/pmtiles@3.0.7/dist/pmtiles.js"></script>
+
+    <script>
+        // PMTilesプロトコルの登録
+        let protocol = new pmtiles.Protocol();
+        maplibregl.addProtocol("pmtiles", protocol.tile);
+
+        // 地図の初期化
+        const map = new maplibregl.Map({
+            container: 'map',
+            style: {
+                version: 8,
+                sources: {
+                    'osm': {
+                        type: 'raster',
+                        tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
+                        tileSize: 256,
+                        attribution: '© OpenStreetMap contributors'
+                    },
+                    'pmtiles': {
+                        type: 'vector',
+                        url: 'pmtiles://output.pmtiles',
+                        attribution: 'PMTiles data'
+                    }
+                },
+                layers: [
+                    {
+                        id: 'osm',
+                        type: 'raster',
+                        source: 'osm',
+                        minzoom: 0,
+                        maxzoom: 22
+                    },
+                    {
+                        id: 'pmtiles-fill',
+                        type: 'fill',
+                        source: 'pmtiles',
+                        'source-layer': 'EPSG6668',
+                        paint: {
+                            'fill-color': [
+                                'match',
+                                ['get', '座標系'],
+                                '任意座標系', '#ff6b6b',  // 赤系
+                                '公共座標11系', '#4dabf7', // 青系
+                                '#95a5a6' // デフォルト（灰色）
+                            ],
+                            'fill-opacity': 0.5
+                        }
+                    },
+                    {
+                        id: 'pmtiles-line',
+                        type: 'line',
+                        source: 'pmtiles',
+                        'source-layer': 'EPSG6668',
+                        paint: {
+                            'line-color': [
+                                'match',
+                                ['get', '座標系'],
+                                '任意座標系', '#c92a2a',  // 濃い赤
+                                '公共座標11系', '#1971c2', // 濃い青
+                                '#495057' // デフォルト（濃い灰色）
+                            ],
+                            'line-width': 2
+                        }
+                    }
+                ]
+            },
+            center: [140.723877, 41.763117],
+            zoom: 12,
+            minZoom: 10,
+            maxZoom: 19
+        });
+
+        // ナビゲーションコントロールを追加
+        map.addControl(new maplibregl.NavigationControl());
+
+        // ポップアップを作成
+        const popup = new maplibregl.Popup({
+            closeButton: true,
+            closeOnClick: false
+        });
+
+        map.on('load', () => {
+            console.log('Map loaded');
+            
+            // PMTilesのレイヤーを確認
+            map.on('sourcedata', (e) => {
+                if (e.sourceId === 'pmtiles' && e.isSourceLoaded) {
+                    console.log('PMTiles source loaded');
+                    
+                    // データの範囲に合わせてズーム
+                    const bounds = map.getBounds();
+                    console.log('Current bounds:', bounds);
+                }
+            });
+
+            // 地物をクリックしたときの処理
+            map.on('click', 'pmtiles-fill', (e) => {
+                if (e.features.length > 0) {
+                    const feature = e.features[0];
+                    const props = feature.properties;
+                    
+                    // プロパティ情報をHTMLに整形
+                    let html = '<div style="max-height: 300px; overflow-y: auto;">';
+                    html += '<h3 style="margin-top: 0;">地物情報</h3>';
+                    html += '<table style="width: 100%; border-collapse: collapse;">';
+                    
+                    // 主要な情報を先に表示
+                    const mainKeys = ['市区町村名', '大字名', '地番', '丁目名', '地図名'];
+                    mainKeys.forEach(key => {
+                        if (props[key]) {
+                            html += `<tr style="border-bottom: 1px solid #ddd;">
+                                <td style="padding: 4px; font-weight: bold;">${key}</td>
+                                <td style="padding: 4px;">${props[key]}</td>
+                            </tr>`;
+                        }
+                    });
+                    
+                    // その他の情報
+                    for (const [key, value] of Object.entries(props)) {
+                        if (!mainKeys.includes(key) && value) {
+                            html += `<tr style="border-bottom: 1px solid #ddd;">
+                                <td style="padding: 4px; font-weight: bold;">${key}</td>
+                                <td style="padding: 4px;">${value}</td>
+                            </tr>`;
+                        }
+                    }
+                    
+                    html += '</table></div>';
+                    
+                    // ポップアップを表示
+                    popup
+                        .setLngLat(e.lngLat)
+                        .setHTML(html)
+                        .addTo(map);
+                }
+            });
+
+            // マウスカーソルを変更
+            map.on('mouseenter', 'pmtiles-fill', () => {
+                map.getCanvas().style.cursor = 'pointer';
+            });
+
+            map.on('mouseleave', 'pmtiles-fill', () => {
+                map.getCanvas().style.cursor = '';
+            });
+        });
+
+        // エラーハンドリング
+        map.on('error', (e) => {
+            console.error('Map error:', e);
+        });
+    </script>
+</body>
+</html>
