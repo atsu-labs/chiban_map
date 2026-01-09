@@ -99,7 +99,8 @@
                     },
                     'chou': {
                         type: 'geojson',
-                        data: 'chou.geojson'
+                        data: 'chou.geojson',
+                        generateId: true
                     }
                 },
                 layers: [
@@ -115,6 +116,7 @@
                         type: 'fill',
                         source: 'pmtiles',
                         'source-layer': 'EPSG6668',
+                        minzoom: 15,
                         paint: {
                             'fill-color': [
                                 'match',
@@ -127,10 +129,23 @@
                         }
                     },
                     {
+                        id: 'pmtiles-fill-hover',
+                        type: 'fill',
+                        source: 'pmtiles',
+                        'source-layer': 'EPSG6668',
+                        minzoom: 15,
+                        filter: ['==', 'ID', ''],
+                        paint: {
+                            'fill-color': '#ffff00',
+                            'fill-opacity': 0.8
+                        }
+                    },
+                    {
                         id: 'pmtiles-line',
                         type: 'line',
                         source: 'pmtiles',
                         'source-layer': 'EPSG6668',
+                        minzoom: 15,
                         paint: {
                             'line-color': [
                                 'match',
@@ -150,36 +165,46 @@
                         paint: {
                             'fill-color': [
                                 'case',
-                                ['has', 'KEY_CODE'],
+                                ['boolean', ['feature-state', 'hover'], false],
+                                '#ffff00',  // ホバー時は黄色
                                 [
-                                    'to-color',
+                                    'case',
+                                    ['has', 'KEY_CODE'],
                                     [
-                                        'concat',
-                                        '#',
+                                        'to-color',
                                         [
-                                            'slice',
+                                            'concat',
+                                            '#',
                                             [
-                                                'to-string',
+                                                'slice',
                                                 [
-                                                    '%',
+                                                    'to-string',
                                                     [
-                                                        '*',
+                                                        '%',
                                                         [
-                                                            'to-number',
-                                                            ['get', 'KEY_CODE']
+                                                            '*',
+                                                            [
+                                                                'to-number',
+                                                                ['get', 'KEY_CODE']
+                                                            ],
+                                                            2654435761
                                                         ],
-                                                        2654435761
-                                                    ],
-                                                    16777215
-                                                ]
-                                            ],
-                                            -6
+                                                        16777215
+                                                    ]
+                                                ],
+                                                -6
+                                            ]
                                         ]
-                                    ]
-                                ],
-                                '#cccccc'
+                                    ],
+                                    '#cccccc'
+                                ]
                             ],
-                            'fill-opacity': 0.5
+                            'fill-opacity': [
+                                'case',
+                                ['boolean', ['feature-state', 'hover'], false],
+                                0.8,  // ホバー時は不透明度を上げる
+                                0.5
+                            ]
                         }
                     },
                     {
@@ -210,6 +235,26 @@
                             'text-halo-color': '#ffffff',
                             'text-halo-width': 2
                         }
+                    },
+                    {
+                        id: 'banchi-label',
+                        type: 'symbol',
+                        source: 'pmtiles',
+                        'source-layer': 'EPSG6668',
+                        minzoom: 18,
+                        layout: {
+                            'text-field': ['get', '地番'],
+                            'text-font': ['Noto Sans Regular'],
+                            'text-size': 12,
+                            'text-anchor': 'center',
+                            'text-allow-overlap': false,
+                            'text-ignore-placement': false
+                        },
+                        paint: {
+                            'text-color': '#1a1a1a',
+                            'text-halo-color': '#ffffff',
+                            'text-halo-width': 1.5
+                        }
                     }
                 ]
             },
@@ -235,6 +280,10 @@
 
         // ズーム変更時に更新
         map.on('zoom', updateZoomLevel);
+
+        // ホバー状態を管理する変数
+        let hoveredFeatureId = null;
+        let hoveredChouId = null;
 
         // ポップアップを作成
         const popup = new maplibregl.Popup({
@@ -300,10 +349,116 @@
 
             // マウスカーソルを変更
             map.on('mouseenter', 'pmtiles-fill', () => {
-                map.getCanvas().style.cursor = 'pointer';
+                const zoom = map.getZoom();
+                // ズームレベルが15以上の場合のみカーソルを変更
+                if (zoom >= 15) {
+                    map.getCanvas().style.cursor = 'pointer';
+                }
             });
 
             map.on('mouseleave', 'pmtiles-fill', () => {
+                map.getCanvas().style.cursor = '';
+            });
+
+            // PMTilesレイヤーのホバーイベント
+            let hoveredProperties = null;
+            
+            map.on('mousemove', 'pmtiles-fill', (e) => {
+                const zoom = map.getZoom();
+                
+                // ズームレベルが15以上の場合のみホバー処理
+                if (zoom >= 15 && e.features.length > 0) {
+                    const feature = e.features[0];
+                    const props = feature.properties;
+                    
+                    // 複数のプロパティを組み合わせて一意に識別
+                    const uniqueKey = `${props.ID}_${props['市区町村C']}_${props['大字コード']}_${props['丁目コード']}_${props['地番']}`;
+                    
+                    // 前回と異なるフィーチャーの場合のみ更新
+                    if (!hoveredProperties || hoveredProperties.uniqueKey !== uniqueKey) {
+                        hoveredProperties = {
+                            uniqueKey: uniqueKey,
+                            ID: props.ID,
+                            市区町村C: props['市区町村C'],
+                            大字コード: props['大字コード'],
+                            丁目コード: props['丁目コード'],
+                            地番: props['地番']
+                        };
+                        
+                        // 複合条件でフィルターを設定
+                        map.setFilter('pmtiles-fill-hover', [
+                            'all',
+                            ['==', 'ID', props.ID],
+                            ['==', '市区町村C', props['市区町村C']],
+                            ['==', '大字コード', props['大字コード']],
+                            ['==', '丁目コード', props['丁目コード']],
+                            ['==', '地番', props['地番']]
+                        ]);
+                    }
+                } else if (zoom < 15) {
+                    // ズームレベルが15未満になったらホバーレイヤーを非表示
+                    map.setFilter('pmtiles-fill-hover', ['==', 'ID', '']);
+                    hoveredProperties = null;
+                }
+            });
+
+            map.on('mouseleave', 'pmtiles-fill', () => {
+                // ホバーレイヤーを非表示
+                map.setFilter('pmtiles-fill-hover', ['==', 'ID', '']);
+                hoveredProperties = null;
+            });
+
+            // chouレイヤーのホバーイベント
+            map.on('mouseenter', 'chou-fill', () => {
+                const zoom = map.getZoom();
+                // ズームレベルが15未満の場合のみカーソルを変更
+                if (zoom < 15) {
+                    map.getCanvas().style.cursor = 'pointer';
+                }
+            });
+
+            map.on('mousemove', 'chou-fill', (e) => {
+                const zoom = map.getZoom();
+                
+                // ズームレベルが15未満の場合のみホバー処理
+                if (zoom < 15 && e.features.length > 0) {
+                    const featureId = e.features[0].id;
+                    
+                    // IDが存在する場合のみ処理
+                    if (featureId !== undefined) {
+                        // 前のホバー状態をリセット
+                        if (hoveredChouId !== null) {
+                            map.setFeatureState(
+                                { source: 'chou', id: hoveredChouId },
+                                { hover: false }
+                            );
+                        }
+                        
+                        // 新しいフィーチャーにホバー状態を設定
+                        hoveredChouId = featureId;
+                        map.setFeatureState(
+                            { source: 'chou', id: hoveredChouId },
+                            { hover: true }
+                        );
+                    }
+                } else if (zoom >= 15 && hoveredChouId !== null) {
+                    // ズームレベルが15以上になったら町のホバー状態をクリア
+                    map.setFeatureState(
+                        { source: 'chou', id: hoveredChouId },
+                        { hover: false }
+                    );
+                    hoveredChouId = null;
+                }
+            });
+
+            map.on('mouseleave', 'chou-fill', () => {
+                if (hoveredChouId !== null) {
+                    map.setFeatureState(
+                        { source: 'chou', id: hoveredChouId },
+                        { hover: false }
+                    );
+                }
+                hoveredChouId = null;
                 map.getCanvas().style.cursor = '';
             });
         });
