@@ -54,11 +54,51 @@
             font-weight: bold;
             z-index: 1;
         }
+        .layer-control {
+            position: absolute;
+            top: 70px;
+            left: 10px;
+            background: white;
+            padding: 10px;
+            border-radius: 5px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+            font-family: Arial, sans-serif;
+            font-size: 14px;
+            z-index: 1;
+        }
+        .layer-control h4 {
+            margin: 0 0 10px 0;
+            font-size: 14px;
+            font-weight: bold;
+        }
+        .layer-control label {
+            display: block;
+            margin: 5px 0;
+            cursor: pointer;
+        }
+        .layer-control input[type="radio"] {
+            margin-right: 5px;
+        }
     </style>
 </head>
 <body>
     <div id="map"></div>
     <div class="zoom-level" id="zoom-level">ズーム: 12</div>
+    <div class="layer-control">
+        <h4>ベースレイヤー</h4>
+        <label>
+            <input type="radio" name="baselayer" value="osm" checked>
+            OpenStreetMap
+        </label>
+        <label>
+            <input type="radio" name="baselayer" value="gsi-std">
+            地理院地図
+        </label>
+        <label>
+            <input type="radio" name="baselayer" value="gsi-photo">
+            地理院航空写真
+        </label>
+    </div>
     <div class="legend">
         <h4>座標系</h4>
         <div class="legend-item">
@@ -92,6 +132,18 @@
                         tileSize: 256,
                         attribution: '© OpenStreetMap contributors'
                     },
+                    'gsi-std': {
+                        type: 'raster',
+                        tiles: ['https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png'],
+                        tileSize: 256,
+                        attribution: '<a href="https://maps.gsi.go.jp/development/ichiran.html" target="_blank">地理院タイル</a>'
+                    },
+                    'gsi-photo': {
+                        type: 'raster',
+                        tiles: ['https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/{z}/{x}/{y}.jpg'],
+                        tileSize: 256,
+                        attribution: '<a href="https://maps.gsi.go.jp/development/ichiran.html" target="_blank">地理院タイル</a>'
+                    },
                     'pmtiles': {
                         type: 'vector',
                         url: 'pmtiles://output.pmtiles',
@@ -110,6 +162,26 @@
                         source: 'osm',
                         minzoom: 0,
                         maxzoom: 22
+                    },
+                    {
+                        id: 'gsi-std',
+                        type: 'raster',
+                        source: 'gsi-std',
+                        minzoom: 0,
+                        maxzoom: 22,
+                        layout: {
+                            visibility: 'none'
+                        }
+                    },
+                    {
+                        id: 'gsi-photo',
+                        type: 'raster',
+                        source: 'gsi-photo',
+                        minzoom: 0,
+                        maxzoom: 22,
+                        layout: {
+                            visibility: 'none'
+                        }
                     },
                     {
                         id: 'pmtiles-fill',
@@ -280,6 +352,22 @@
 
         // ズーム変更時に更新
         map.on('zoom', updateZoomLevel);
+
+        // ベースレイヤー切り替え機能
+        const baselayerRadios = document.querySelectorAll('input[name="baselayer"]');
+        baselayerRadios.forEach(radio => {
+            radio.addEventListener('change', (e) => {
+                const selectedLayer = e.target.value;
+                
+                // すべてのベースレイヤーを非表示
+                map.setLayoutProperty('osm', 'visibility', 'none');
+                map.setLayoutProperty('gsi-std', 'visibility', 'none');
+                map.setLayoutProperty('gsi-photo', 'visibility', 'none');
+                
+                // 選択されたレイヤーのみ表示
+                map.setLayoutProperty(selectedLayer, 'visibility', 'visible');
+            });
+        });
 
         // ホバー状態を管理する変数
         let hoveredFeatureId = null;
