@@ -84,6 +84,7 @@
             container: 'map',
             style: {
                 version: 8,
+                glyphs: 'https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf',
                 sources: {
                     'osm': {
                         type: 'raster',
@@ -95,6 +96,10 @@
                         type: 'vector',
                         url: 'pmtiles://output.pmtiles',
                         attribution: 'PMTiles data'
+                    },
+                    'chou': {
+                        type: 'geojson',
+                        data: 'chou.geojson'
                     }
                 },
                 layers: [
@@ -135,6 +140,75 @@
                                 '#495057' // デフォルト（濃い灰色）
                             ],
                             'line-width': 2
+                        }
+                    },
+                    {
+                        id: 'chou-fill',
+                        type: 'fill',
+                        source: 'chou',
+                        minzoom: 12,
+                        paint: {
+                            'fill-color': [
+                                'case',
+                                ['has', 'KEY_CODE'],
+                                [
+                                    'to-color',
+                                    [
+                                        'concat',
+                                        '#',
+                                        [
+                                            'slice',
+                                            [
+                                                'to-string',
+                                                [
+                                                    '%',
+                                                    [
+                                                        '*',
+                                                        [
+                                                            'to-number',
+                                                            ['get', 'KEY_CODE']
+                                                        ],
+                                                        2654435761
+                                                    ],
+                                                    16777215
+                                                ]
+                                            ],
+                                            -6
+                                        ]
+                                    ]
+                                ],
+                                '#cccccc'
+                            ],
+                            'fill-opacity': 0.5
+                        }
+                    },
+                    {
+                        id: 'chou-line',
+                        type: 'line',
+                        source: 'chou',
+                        minzoom: 12,
+                        paint: {
+                            'line-color': '#333333',
+                            'line-width': 1.5
+                        }
+                    },
+                    {
+                        id: 'chou-label',
+                        type: 'symbol',
+                        source: 'chou',
+                        minzoom: 13,
+                        layout: {
+                            'text-field': ['get', 'S_NAME'],
+                            'text-font': ['Noto Sans Regular'],
+                            'text-size': 14,
+                            'text-anchor': 'center',
+                            'text-allow-overlap': false,
+                            'text-ignore-placement': false
+                        },
+                        paint: {
+                            'text-color': '#000000',
+                            'text-halo-color': '#ffffff',
+                            'text-halo-width': 2
                         }
                     }
                 ]
@@ -194,7 +268,7 @@
                     html += '<table style="width: 100%; border-collapse: collapse;">';
                     
                     // 主要な情報を先に表示
-                    const mainKeys = ['市区町村名', '大字名', '地番', '丁目名', '地図名'];
+                    const mainKeys = ['市区町村名', '大字名', '丁目名', '地番', '地図名'];
                     mainKeys.forEach(key => {
                         if (props[key]) {
                             html += `<tr style="border-bottom: 1px solid #ddd;">
