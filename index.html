@@ -41,10 +41,24 @@
             margin-right: 8px;
             border: 1px solid #333;
         }
+        .zoom-level {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: white;
+            padding: 10px 15px;
+            border-radius: 5px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+            font-family: Arial, sans-serif;
+            font-size: 16px;
+            font-weight: bold;
+            z-index: 1;
+        }
     </style>
 </head>
 <body>
     <div id="map"></div>
+    <div class="zoom-level" id="zoom-level">ズーム: 12</div>
     <div class="legend">
         <h4>座標系</h4>
         <div class="legend-item">
@@ -133,6 +147,20 @@
 
         // ナビゲーションコントロールを追加
         map.addControl(new maplibregl.NavigationControl());
+
+        // ズームレベル表示を更新する関数
+        function updateZoomLevel() {
+            const zoom = map.getZoom().toFixed(1);
+            document.getElementById('zoom-level').textContent = `ズーム: ${zoom}`;
+        }
+
+        // 初期表示
+        map.on('load', () => {
+            updateZoomLevel();
+        });
+
+        // ズーム変更時に更新
+        map.on('zoom', updateZoomLevel);
 
         // ポップアップを作成
         const popup = new maplibregl.Popup({
