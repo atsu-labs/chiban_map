@@ -228,7 +228,7 @@
                         source: 'pmtiles',
                         'source-layer': 'EPSG6668',
                         minzoom: 15,
-                        filter: ['==', 'ID', ''],
+                        filter: ['==', 'fid', -1],
                         paint: {
                             'fill-color': '#ffff00',
                             'fill-opacity': 0.8
@@ -483,6 +483,7 @@
 
             // PMTilesレイヤーのホバーイベント
             let hoveredProperties = null;
+            let hoverTimeout = null;
             
             map.on('mousemove', 'pmtiles-fill', (e) => {
                 const zoom = map.getZoom();
@@ -492,40 +493,64 @@
                     const feature = e.features[0];
                     const props = feature.properties;
                     
-                    // 複数のプロパティを組み合わせて一意に識別
-                    const uniqueKey = `${props.ID}_${props['市区町村C']}_${props['大字コード']}_${props['丁目コード']}_${props['地番']}`;
+                    // 筆ID（fid）を使用して一意に識別（任意座標系と公共座標系の両方に存在）
+                    const uniqueKey = props.fid || props['筆ID'] || `${props['大字コード']}_${props['丁目コード']}_${props['地番']}`;
                     
-                    // 前回と異なるフィーチャーの場合のみ更新
-                    if (!hoveredProperties || hoveredProperties.uniqueKey !== uniqueKey) {
-                        hoveredProperties = {
-                            uniqueKey: uniqueKey,
-                            ID: props.ID,
-                            市区町村C: props['市区町村C'],
-                            大字コード: props['大字コード'],
-                            丁目コード: props['丁目コード'],
-                            地番: props['地番']
-                        };
-                        
-                        // 複合条件でフィルターを設定
-                        map.setFilter('pmtiles-fill-hover', [
-                            'all',
-                            ['==', 'ID', props.ID],
-                            ['==', '市区町村C', props['市区町村C']],
-                            ['==', '大字コード', props['大字コード']],
-                            ['==', '丁目コード', props['丁目コード']],
-                            ['==', '地番', props['地番']]
-                        ]);
+                    // デバウンス処理: 既存のタイムアウトをクリア
+                    if (hoverTimeout) {
+                        clearTimeout(hoverTimeout);
                     }
+                    
+                    // マウスが停止してから200ms後にハイライトを更新
+                    hoverTimeout = setTimeout(() => {
+                        // 前回と異なるフィーチャーの場合のみ更新
+                        if (!hoveredProperties || hoveredProperties.uniqueKey !== uniqueKey) {
+                            hoveredProperties = {
+                                uniqueKey: uniqueKey,
+                                fid: props.fid,
+                                筆ID: props['筆ID'],
+                                大字コード: props['大字コード'],
+                                丁目コード: props['丁目コード'],
+                                地番: props['地番']
+                            };
+                            
+                            // フィルター条件を構築（任意座標系にも対応）
+                            let filterConditions = ['all'];
+                            
+                            // fid または 筆ID がある場合はそれを使用
+                            if (props.fid) {
+                                filterConditions.push(['==', 'fid', props.fid]);
+                            } else if (props['筆ID']) {
+                                filterConditions.push(['==', '筆ID', props['筆ID']]);
+                            } else {
+                                // どちらもない場合は複合キーを使用
+                                filterConditions.push(['==', '大字コード', props['大字コード']]);
+                                filterConditions.push(['==', '丁目コード', props['丁目コード']]);
+                                filterConditions.push(['==', '地番', props['地番']]);
+                            }
+                            
+                            map.setFilter('pmtiles-fill-hover', filterConditions);
+                        }
+                    }, 200);
                 } else if (zoom < 15) {
                     // ズームレベルが15未満になったらホバーレイヤーを非表示
-                    map.setFilter('pmtiles-fill-hover', ['==', 'ID', '']);
+                    if (hoverTimeout) {
+                        clearTimeout(hoverTimeout);
+                        hoverTimeout = null;
+                    }
+                    map.setFilter('pmtiles-fill-hover', ['==', 'fid', -1]);
                     hoveredProperties = null;
                 }
             });
 
             map.on('mouseleave', 'pmtiles-fill', () => {
+                // タイムアウトをクリア
+                if (hoverTimeout) {
+                    clearTimeout(hoverTimeout);
+                    hoverTimeout = null;
+                }
                 // ホバーレイヤーを非表示
-                map.setFilter('pmtiles-fill-hover', ['==', 'ID', '']);
+                map.setFilter('pmtiles-fill-hover', ['==', 'fid', -1]);
                 hoveredProperties = null;
             });
 
