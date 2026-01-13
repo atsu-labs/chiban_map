@@ -79,10 +79,32 @@
         .layer-control input[type="radio"] {
             margin-right: 5px;
         }
+        .reset-pitch-button {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: white;
+            padding: 8px 12px;
+            border-radius: 5px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+            font-family: Arial, sans-serif;
+            font-size: 14px;
+            cursor: pointer;
+            border: none;
+            z-index: 1;
+            transition: background-color 0.2s;
+        }
+        .reset-pitch-button:hover {
+            background-color: #f0f0f0;
+        }
+        .reset-pitch-button:active {
+            background-color: #e0e0e0;
+        }
     </style>
 </head>
 <body>
     <div id="map"></div>
+    <button class="reset-pitch-button" id="reset-pitch-button">傾きをリセット</button>
     <div class="zoom-level" id="zoom-level">ズーム: 12</div>
     <div class="layer-control">
         <h4>ベースレイヤー</h4>
@@ -234,6 +256,7 @@
                         type: 'fill',
                         source: 'chou',
                         minzoom: 12,
+                        maxzoom: 18,
                         paint: {
                             'fill-color': [
                                 'case',
@@ -242,41 +265,37 @@
                                 [
                                     'case',
                                     ['has', 'KEY_CODE'],
+                                    // 6色のクリーンなカラーパレットを使用
                                     [
-                                        'to-color',
-                                        [
-                                            'concat',
-                                            '#',
-                                            [
-                                                'slice',
-                                                [
-                                                    'to-string',
-                                                    [
-                                                        '%',
-                                                        [
-                                                            '*',
-                                                            [
-                                                                'to-number',
-                                                                ['get', 'KEY_CODE']
-                                                            ],
-                                                            2654435761
-                                                        ],
-                                                        16777215
-                                                    ]
-                                                ],
-                                                -6
-                                            ]
-                                        ]
+                                        'match',
+                                        ['%', ['to-number', ['get', 'KEY_CODE']], 6],
+                                        0, '#74c0fc',  // ライトブルー
+                                        1, '#a5d8ff',  // スカイブルー
+                                        2, '#91e697',  // ライトグリーン
+                                        3, '#ffd43b',  // イエロー
+                                        4, '#ffa8a8',  // ライトレッド
+                                        5, '#da77f2',  // ライトパープル
+                                        '#b197fc'      // デフォルト
                                     ],
-                                    '#cccccc'
+                                    '#e0e0e0'  // KEY_CODEがない場合はライトグレー
                                 ]
                             ],
                             'fill-opacity': [
                                 'case',
                                 ['boolean', ['feature-state', 'hover'], false],
                                 0.8,  // ホバー時は不透明度を上げる
-                                0.5
+                                0.6
                             ]
+                        }
+                    },
+                    {
+                        id: 'chou-fill-zoomed',
+                        type: 'fill',
+                        source: 'chou',
+                        minzoom: 18,
+                        paint: {
+                            'fill-color': 'transparent',
+                            'fill-opacity': 0
                         }
                     },
                     {
@@ -286,7 +305,13 @@
                         minzoom: 12,
                         paint: {
                             'line-color': '#333333',
-                            'line-width': 1.5
+                            'line-width': [
+                                'interpolate',
+                                ['linear'],
+                                ['zoom'],
+                                12, 1.5,
+                                18, 2.5
+                            ]
                         }
                     },
                     {
@@ -338,6 +363,15 @@
 
         // ナビゲーションコントロールを追加
         map.addControl(new maplibregl.NavigationControl());
+
+        // 傾きリセットボタンの処理
+        document.getElementById('reset-pitch-button').addEventListener('click', () => {
+            map.easeTo({
+                pitch: 0,
+                bearing: 0,
+                duration: 500
+            });
+        });
 
         // ズームレベル表示を更新する関数
         function updateZoomLevel() {
@@ -450,6 +484,7 @@
 
             // PMTilesレイヤーのホバーイベント
             let hoveredProperties = null;
+            let hoverTimeout = null;
             
             map.on('mousemove', 'pmtiles-fill', (e) => {
                 const zoom = map.getZoom();
@@ -464,6 +499,11 @@
                     
                     // 前回と異なるフィーチャーの場合のみ更新
                     if (!hoveredProperties || hoveredProperties.uniqueKey !== uniqueKey) {
+                        // タイムアウトをクリア（連続したイベントを防ぐ）
+                        if (hoverTimeout) {
+                            clearTimeout(hoverTimeout);
+                        }
+                        
                         hoveredProperties = {
                             uniqueKey: uniqueKey,
                             ID: props.ID,
@@ -512,8 +552,8 @@
                 if (zoom < 15 && e.features.length > 0) {
                     const featureId = e.features[0].id;
                     
-                    // IDが存在する場合のみ処理
-                    if (featureId !== undefined) {
+                    // IDが存在し、前回と異なる場合のみ処理
+                    if (featureId !== undefined && featureId !== hoveredChouId) {
                         // 前のホバー状態をリセット
                         if (hoveredChouId !== null) {
                             map.setFeatureState(
