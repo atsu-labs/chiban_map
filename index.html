@@ -484,7 +484,7 @@
             // PMTilesレイヤーのホバーイベント
             let hoveredProperties = null;
             let hoverTimeout = null;
-            const HOVER_DEBOUNCE_DELAY = 200; // マウス停止後のハイライト遅延（ミリ秒）
+            const HOVER_DEBOUNCE_DELAY = 100; // マウス停止後のハイライト遅延（ミリ秒）
             
             map.on('mousemove', 'pmtiles-fill', (e) => {
                 const zoom = map.getZoom();
