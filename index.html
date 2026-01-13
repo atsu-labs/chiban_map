@@ -484,7 +484,6 @@
 
             // PMTilesレイヤーのホバーイベント
             let hoveredProperties = null;
-            let hoverTimeout = null;
             
             map.on('mousemove', 'pmtiles-fill', (e) => {
                 const zoom = map.getZoom();
@@ -499,11 +498,6 @@
                     
                     // 前回と異なるフィーチャーの場合のみ更新
                     if (!hoveredProperties || hoveredProperties.uniqueKey !== uniqueKey) {
-                        // タイムアウトをクリア（連続したイベントを防ぐ）
-                        if (hoverTimeout) {
-                            clearTimeout(hoverTimeout);
-                        }
-                        
                         hoveredProperties = {
                             uniqueKey: uniqueKey,
                             ID: props.ID,
