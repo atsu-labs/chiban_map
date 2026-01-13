@@ -81,7 +81,7 @@
         }
         .reset-pitch-button {
             position: absolute;
-            top: 10px;
+            top: 120px;
             right: 10px;
             background: white;
             padding: 8px 12px;
@@ -256,7 +256,7 @@
                         type: 'fill',
                         source: 'chou',
                         minzoom: 12,
-                        maxzoom: 18,
+                        maxzoom: 15,
                         paint: {
                             'fill-color': [
                                 'case',
@@ -266,9 +266,30 @@
                                     'case',
                                     ['has', 'KEY_CODE'],
                                     // 6色のクリーンなカラーパレットを使用
+                                    // KEY_CODEをハッシュ化して色を分散
                                     [
                                         'match',
-                                        ['%', ['to-number', ['get', 'KEY_CODE']], 6],
+                                        [
+                                            '%',
+                                            [
+                                                '%',
+                                                [
+                                                    '+',
+                                                    [
+                                                        '*',
+                                                        ['to-number', ['slice', ['get', 'KEY_CODE'], 0, 3]],
+                                                        31
+                                                    ],
+                                                    [
+                                                        '*',
+                                                        ['to-number', ['slice', ['get', 'KEY_CODE'], -4]],
+                                                        17
+                                                    ]
+                                                ],
+                                                1000
+                                            ],
+                                            6
+                                        ],
                                         0, '#74c0fc',  // ライトブルー
                                         1, '#a5d8ff',  // スカイブルー
                                         2, '#91e697',  // ライトグリーン
@@ -292,7 +313,7 @@
                         id: 'chou-fill-zoomed',
                         type: 'fill',
                         source: 'chou',
-                        minzoom: 18,
+                        minzoom: 15,
                         paint: {
                             'fill-opacity': 0
                         }
@@ -309,7 +330,7 @@
                                 ['linear'],
                                 ['zoom'],
                                 12, 1.5,
-                                18, 2.5
+                                15, 2.5
                             ]
                         }
                     },
