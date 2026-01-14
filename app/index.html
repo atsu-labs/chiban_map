@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PMTiles Viewer</title>
+    <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.css" />
+    <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+    <div id="map"></div>
+    <button class="reset-pitch-button" id="reset-pitch-button">傾きをリセット</button>
+    <div class="zoom-level" id="zoom-level">ズーム: 12</div>
+    <div class="layer-control">
+        <h4>ベースレイヤー</h4>
+        <label>
+            <input type="radio" name="baselayer" value="osm" checked>
+            OpenStreetMap
+        </label>
+        <label>
+            <input type="radio" name="baselayer" value="gsi-std">
+            地理院地図
+        </label>
+        <label>
+            <input type="radio" name="baselayer" value="gsi-photo">
+            地理院航空写真
+        </label>
+    </div>
+    <div class="legend">
+        <h4>座標系</h4>
+        <div class="legend-item">
+            <div class="legend-color" style="background-color: #ff6b6b;"></div>
+            <span>任意座標系</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-color" style="background-color: #4dabf7;"></div>
+            <span>公共座標11系</span>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.js"></script>
+    <script src="https://unpkg.com/pmtiles@3.0.7/dist/pmtiles.js"></script>
+    <script src="js/map.js"></script>
+</body>
+</html>
