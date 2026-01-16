@@ -284,6 +284,13 @@ let selectedFeatureKey = null;  // 選択中の地物を識別するキー
 function displayFeatureInfo(properties) {
     const infoContent = document.getElementById('info-panel-content');
     
+    // HTMLエスケープ関数
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+    
     let html = '<table class="info-table">';
     
     // 主要な情報を先に表示
@@ -291,8 +298,8 @@ function displayFeatureInfo(properties) {
     mainKeys.forEach(key => {
         if (properties[key]) {
             html += `<tr>
-                <td>${key}</td>
-                <td>${properties[key]}</td>
+                <td>${escapeHtml(key)}</td>
+                <td>${escapeHtml(String(properties[key]))}</td>
             </tr>`;
         }
     });
@@ -301,8 +308,8 @@ function displayFeatureInfo(properties) {
     for (const [key, value] of Object.entries(properties)) {
         if (!mainKeys.includes(key) && value) {
             html += `<tr>
-                <td>${key}</td>
-                <td>${value}</td>
+                <td>${escapeHtml(key)}</td>
+                <td>${escapeHtml(String(value))}</td>
             </tr>`;
         }
     }
@@ -345,8 +352,12 @@ map.on('load', () => {
             const 地番 = props['地番'];
             const 地図名 = props['地図名'];
             
-            if (市区町村識別子 == null || 大字コード == null || 丁目コード == null || 
-                小字コード == null || 地番 == null || 地図名 == null) {
+            if (市区町村識別子 === null || 市区町村識別子 === undefined || 
+                大字コード === null || 大字コード === undefined || 
+                丁目コード === null || 丁目コード === undefined || 
+                小字コード === null || 小字コード === undefined || 
+                地番 === null || 地番 === undefined || 
+                地図名 === null || 地図名 === undefined) {
                 return;
             }
             
@@ -414,8 +425,12 @@ map.on('load', () => {
             const 地図名 = props['地図名'];
             
             // 必須プロパティの存在確認
-            if (市区町村識別子 == null || 大字コード == null || 丁目コード == null || 
-                小字コード == null || 地番 == null || 地図名 == null) {
+            if (市区町村識別子 === null || 市区町村識別子 === undefined || 
+                大字コード === null || 大字コード === undefined || 
+                丁目コード === null || 丁目コード === undefined || 
+                小字コード === null || 小字コード === undefined || 
+                地番 === null || 地番 === undefined || 
+                地図名 === null || 地図名 === undefined) {
                 // プロパティが不足している場合はスキップ
                 return;
             }
