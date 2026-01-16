@@ -104,7 +104,7 @@ const map = new maplibregl.Map({
                 filter: ['==', '市区町村C', ''],
                 paint: {
                     'fill-color': '#00ff00',
-                    'fill-opacity': 0.7
+                    'fill-opacity': 0.3
                 }
             },
             {
