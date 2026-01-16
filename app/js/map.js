@@ -96,6 +96,18 @@ const map = new maplibregl.Map({
                 }
             },
             {
+                id: 'pmtiles-fill-selected',
+                type: 'fill',
+                source: 'pmtiles',
+                'source-layer': 'EPSG6668',
+                minzoom: 15,
+                filter: ['==', '市区町村C', ''],
+                paint: {
+                    'fill-color': '#00ff00',
+                    'fill-opacity': 0.3
+                }
+            },
+            {
                 id: 'pmtiles-line',
                 type: 'line',
                 source: 'pmtiles',
@@ -266,12 +278,51 @@ baselayerRadios.forEach(radio => {
 // ホバー状態を管理する変数
 let hoveredFeatureId = null;
 let hoveredChouId = null;
+let selectedFeatureKey = null;  // 選択中の地物を識別するキー
 
-// ポップアップを作成
-const popup = new maplibregl.Popup({
-    closeButton: true,
-    closeOnClick: false
-});
+// 情報パネルに情報を表示する関数
+function displayFeatureInfo(properties) {
+    const infoContent = document.getElementById('info-panel-content');
+    
+    // HTMLエスケープ関数
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+    
+    let html = '<table class="info-table">';
+    
+    // 主要な情報を先に表示
+    const mainKeys = ['市区町村名', '大字名', '丁目名', '地番', '地図名', '座標系'];
+    mainKeys.forEach(key => {
+        if (properties[key]) {
+            html += `<tr>
+                <td>${escapeHtml(key)}</td>
+                <td>${escapeHtml(String(properties[key]))}</td>
+            </tr>`;
+        }
+    });
+    
+    // その他の情報
+    for (const [key, value] of Object.entries(properties)) {
+        if (!mainKeys.includes(key) && value) {
+            html += `<tr>
+                <td>${escapeHtml(key)}</td>
+                <td>${escapeHtml(String(value))}</td>
+            </tr>`;
+        }
+    }
+    
+    html += '</table>';
+    infoContent.innerHTML = html;
+}
+
+// 情報パネルをクリアする関数
+function clearFeatureInfo() {
+    const infoContent = document.getElementById('info-panel-content');
+    infoContent.innerHTML = '<p class="info-panel-empty">地物をクリックすると情報が表示されます</p>';
+}
 
 map.on('load', () => {
     console.log('Map loaded');
@@ -293,39 +344,52 @@ map.on('load', () => {
             const feature = e.features[0];
             const props = feature.properties;
             
-            // プロパティ情報をHTMLに整形
-            let html = '<div style="max-height: 300px; overflow-y: auto;">';
-            html += '<h3 style="margin-top: 0;">地物情報</h3>';
-            html += '<table style="width: 100%; border-collapse: collapse;">';
+            // 一意な識別子を作成
+            const 市区町村識別子 = props['市区町村C'] || props['市区町村コード'];
+            const 大字コード = props['大字コード'];
+            const 丁目コード = props['丁目コード'];
+            const 小字コード = props['小字コード'];
+            const 地番 = props['地番'];
+            const 地図名 = props['地図名'];
             
-            // 主要な情報を先に表示
-            const mainKeys = ['市区町村名', '大字名', '丁目名', '地番', '地図名'];
-            mainKeys.forEach(key => {
-                if (props[key]) {
-                    html += `<tr style="border-bottom: 1px solid #ddd;">
-                        <td style="padding: 4px; font-weight: bold;">${key}</td>
-                        <td style="padding: 4px;">${props[key]}</td>
-                    </tr>`;
-                }
-            });
-            
-            // その他の情報
-            for (const [key, value] of Object.entries(props)) {
-                if (!mainKeys.includes(key) && value) {
-                    html += `<tr style="border-bottom: 1px solid #ddd;">
-                        <td style="padding: 4px; font-weight: bold;">${key}</td>
-                        <td style="padding: 4px;">${value}</td>
-                    </tr>`;
-                }
+            if (市区町村識別子 === null || 市区町村識別子 === undefined || 
+                大字コード === null || 大字コード === undefined || 
+                丁目コード === null || 丁目コード === undefined || 
+                小字コード === null || 小字コード === undefined || 
+                地番 === null || 地番 === undefined || 
+                地図名 === null || 地図名 === undefined) {
+                return;
             }
             
-            html += '</table></div>';
+            const uniqueKey = JSON.stringify({
+                市区町村識別子,
+                大字コード,
+                丁目コード,
+                小字コード,
+                地番,
+                地図名
+            });
             
-            // ポップアップを表示
-            popup
-                .setLngLat(e.lngLat)
-                .setHTML(html)
-                .addTo(map);
+            // 選択状態を更新
+            selectedFeatureKey = uniqueKey;
+            
+            // 選択レイヤーのフィルターを更新
+            const filterConditions = ['all',
+                ['any',
+                    ['==', '市区町村C', 市区町村識別子],
+                    ['==', '市区町村コード', 市区町村識別子]
+                ],
+                ['==', '大字コード', 大字コード],
+                ['==', '丁目コード', 丁目コード],
+                ['==', '小字コード', 小字コード],
+                ['==', '地番', 地番],
+                ['==', '地図名', 地図名]
+            ];
+            
+            map.setFilter('pmtiles-fill-selected', filterConditions);
+            
+            // 情報パネルに表示
+            displayFeatureInfo(props);
         }
     });
 
@@ -368,14 +432,25 @@ map.on('load', () => {
             const 地図名 = props['地図名'];
             
             // 必須プロパティの存在確認
-            if (市区町村識別子 == null || 大字コード == null || 丁目コード == null || 
-                小字コード == null || 地番 == null || 地図名 == null) {
+            if (市区町村識別子 === null || 市区町村識別子 === undefined || 
+                大字コード === null || 大字コード === undefined || 
+                丁目コード === null || 丁目コード === undefined || 
+                小字コード === null || 小字コード === undefined || 
+                地番 === null || 地番 === undefined || 
+                地図名 === null || 地図名 === undefined) {
                 // プロパティが不足している場合はスキップ
                 return;
             }
             
             // 複合キーで識別
-            const uniqueKey = `${市区町村識別子}_${大字コード}_${丁目コード}_${小字コード}_${地番}_${地図名}`;
+            const uniqueKey = JSON.stringify({
+                市区町村識別子,
+                大字コード,
+                丁目コード,
+                小字コード,
+                地番,
+                地図名
+            });
             
             // デバウンス処理: 既存のタイムアウトをクリア
             if (hoverTimeout) {
@@ -487,6 +562,19 @@ map.on('load', () => {
         }
         hoveredChouId = null;
         map.getCanvas().style.cursor = '';
+    });
+
+    // マップ全体のクリックイベント（地物以外をクリックした場合）
+    map.on('click', (e) => {
+        // pmtiles-fillレイヤーの地物をクリックしたかチェック
+        const pmtilesFeatures = map.queryRenderedFeatures(e.point, { layers: ['pmtiles-fill'] });
+        
+        // 地物をクリックしていない場合は選択をクリア
+        if (pmtilesFeatures.length === 0) {
+            selectedFeatureKey = null;
+            map.setFilter('pmtiles-fill-selected', ['==', '市区町村C', '']);
+            clearFeatureInfo();
+        }
     });
 });
 
