@@ -51,6 +51,7 @@ body {
 #map {
     flex: 1;
     height: 100%;
+    position: relative;
 }
 
 /* 情報パネル */
@@ -121,7 +122,7 @@ body {
     box-shadow: 0 2px 4px rgba(0,0,0,0.3);
     font-family: Arial, sans-serif;
     font-size: 14px;
-    z-index: 1;
+    z-index: 10;
 }
 
 .legend h4 {
@@ -153,7 +154,7 @@ body {
     font-family: Arial, sans-serif;
     font-size: 16px;
     font-weight: bold;
-    z-index: 1;
+    z-index: 10;
 }
 
 .layer-control {
@@ -166,7 +167,7 @@ body {
     box-shadow: 0 2px 4px rgba(0,0,0,0.3);
     font-family: Arial, sans-serif;
     font-size: 14px;
-    z-index: 1;
+    z-index: 10;
 }
 
 .layer-control h4 {
@@ -187,7 +188,7 @@ body {
 
 .reset-pitch-button {
     position: absolute;
-    top: 120px;
+    top: 10px;
     right: 10px;
     background: white;
     padding: 8px 12px;
@@ -197,7 +198,7 @@ body {
     font-size: 14px;
     cursor: pointer;
     border: none;
-    z-index: 1;
+    z-index: 10;
     transition: background-color 0.2s;
 }
 
