@@ -361,7 +361,14 @@ map.on('load', () => {
                 return;
             }
             
-            const uniqueKey = `${市区町村識別子}_${大字コード}_${丁目コード}_${小字コード}_${地番}_${地図名}`;
+            const uniqueKey = JSON.stringify({
+                市区町村識別子,
+                大字コード,
+                丁目コード,
+                小字コード,
+                地番,
+                地図名
+            });
             
             // 選択状態を更新
             selectedFeatureKey = uniqueKey;
@@ -436,7 +443,14 @@ map.on('load', () => {
             }
             
             // 複合キーで識別
-            const uniqueKey = `${市区町村識別子}_${大字コード}_${丁目コード}_${小字コード}_${地番}_${地図名}`;
+            const uniqueKey = JSON.stringify({
+                市区町村識別子,
+                大字コード,
+                丁目コード,
+                小字コード,
+                地番,
+                地図名
+            });
             
             // デバウンス処理: 既存のタイムアウトをクリア
             if (hoverTimeout) {
