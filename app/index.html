@@ -3,12 +3,26 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PMTiles Viewer</title>
+    <title>函館市地番地図</title>
     <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.css" />
     <link rel="stylesheet" href="css/style.css" />
 </head>
 <body>
-    <div id="map"></div>
+    <header class="header">
+        <h1 class="header-title">函館市地番地図</h1>
+        <nav class="header-nav">
+            <a href="#usage" class="header-link">使用方法</a>
+        </nav>
+    </header>
+    <div class="main-container">
+        <div id="map"></div>
+        <div class="info-panel" id="info-panel">
+            <div class="info-panel-header">地物情報</div>
+            <div class="info-panel-content" id="info-panel-content">
+                <p class="info-panel-empty">地物をクリックすると情報が表示されます</p>
+            </div>
+        </div>
+    </div>
     <button class="reset-pitch-button" id="reset-pitch-button">傾きをリセット</button>
     <div class="zoom-level" id="zoom-level">ズーム: 12</div>
     <div class="layer-control">
