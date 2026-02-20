@@ -29,7 +29,7 @@ const map = new maplibregl.Map({
             },
             'pmtiles': {
                 type: 'vector',
-                url: 'pmtiles://https://geo.gside-lab.com/output.pmtiles',
+                url: 'pmtiles://output.pmtiles', // リポジトリ内のローカルファイルを参照
                 attribution: 'PMTiles data'
             },
             'chou': {
